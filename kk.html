@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>My E-Commerce Shop</title>
+<style>
+:root { --bg:#f5f6fb; --card:#fff; --accent:#2563eb; --muted:#555; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111;}
+header{display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,0.05);}
+header h1{font-size:1.3rem;}
+header button{margin-left:0.5rem;border:none;background:var(--accent);color:#fff;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;}
+.container{max-width:1200px;margin:2rem auto;padding:0 1rem;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;}
+.card{background:var(--card);padding:0.8rem;border-radius:12px;box-shadow:0 5px 14px rgba(0,0,0,0.06);display:flex;flex-direction:column;transition:transform .2s;}
+.card:hover{transform:translateY(-3px);}
+.card img{width:100%;height:180px;object-fit:cover;border-radius:8px;}
+.card h3{margin:0.5rem 0 0.25rem;}
+.card p{flex:1;color:var(--muted);font-size:0.9rem;}
+.add-btn{background:var(--accent);color:#fff;border:none;padding:0.45rem 0.8rem;border-radius:8px;cursor:pointer;}
+.cart-panel{position:fixed;top:0;right:0;width:320px;height:100%;background:#fff;box-shadow:-3px 0 10px rgba(0,0,0,0.1);transform:translateX(100%);transition:transform .3s;padding:1rem;overflow-y:auto;z-index:999;}
+.cart-panel.open{transform:translateX(0);}
+.cart-item{display:flex;gap:0.5rem;margin-bottom:0.6rem;align-items:center;}
+.cart-item img{width:64px;height:64px;object-fit:cover;border-radius:8px;}
+.cart-item .meta{flex:1;}
+.cart-item button{border:none;background:none;color:#c53030;cursor:pointer;}
+.cart-actions{display:flex;justify-content:space-between;margin-top:1rem;}
+button.checkout{background:green;color:#fff;padding:0.5rem 1rem;border-radius:8px;border:none;cursor:pointer;}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:1000;}
+.modal.show{display:flex;}
+.box{background:#fff;padding:2rem;border-radius:12px;width:300px;text-align:center;}
+.box input{width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ddd;border-radius:8px;}
+.box button{width:100%;padding:0.6rem;margin-top:0.5rem;background:var(--accent);border:none;color:#fff;border-radius:8px;cursor:pointer;}
+.toggle{margin-top:0.5rem;color:var(--accent);cursor:pointer;}
+#orders-page{display:none;}
+table{width:100%;border-collapse:collapse;margin-top:1rem;}
+th,td{border:1px solid #ddd;padding:8px;text-align:left;}
+th{background:#f2f2f2;}
+</style>
+</head>
+<body>
+<header>
+  <h1>My E-Shop</h1>
+  <div>
+    <button id="btn-orders" style="display:none;">View Orders</button>
+    <button id="btn-login">Login</button>
+    <button id="btn-cart">Cart (<span id="cart-count">0</span>)</button>
+  </div>
+</header>
+
+<main class="container">
+  <section id="product-page">
+    <h2>Products</h2>
+    <div id="product-grid" class="grid"></div>
+  </section>
+  <section id="orders-page">
+    <h2>All Orders (Admin Only)</h2>
+    <table id="orders-table">
+      <thead><tr><th>#</th><th>Email</th><th>Address</th><th>Phone</th><th>Items</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+
+<!-- Cart Panel -->
+<div id="cart" class="cart-panel">
+  <h2>Your Cart</h2>
+  <div id="cart-items"></div>
+  <div class="cart-actions">
+    <button class="checkout" id="checkout">Buy Now</button>
+    <button id="close-cart">Close</button>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal">
+  <div class="box">
+    <h2 id="auth-title">Login</h2>
+    <input id="email" type="email" placeholder="Email" required>
+    <input id="password" type="password" placeholder="Password" required>
+    <button id="auth-submit">Submit</button>
+    <div class="toggle" id="toggle-mode">Don't have an account? Register</div>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div id="checkout-modal" class="modal">
+  <div class="box">
+    <h2>Shipping Details</h2>
+    <input id="address" placeholder="Address" required>
+    <input id="phone" placeholder="Phone Number (10 digits)" required maxlength="10">
+    <button id="confirm-buy">Confirm Purchase</button>
+  </div>
+</div>
+
+<script>
+// === PRODUCTS ===
+const products = [
+  {id:1,title:'Blue Socks',price:9.99,img:'https://sporcks.com/cdn/shop/files/azul1_13cdfbff-09ad-47dc-a460-05a534c5573d.jpg?v=1717067226&width=2048'},
+  {id:2,title:'Classic Sports Shoe',price:49.99,img:'https://5.imimg.com/data5/SELLER/Default/2023/10/355391427/DO/XA/OJ/22135971/1-500x500.jpg'},
+  {id:3,title:'Stylish Running Shoe',price:59.99,img:'https://i.ebayimg.com/images/g/0icAAeSwHRxouXow/s-l1200.jpg'},
+  {id:4,title:'Casual Blue Shoe',price:39.99,img:'https://i.pinimg.com/736x/be/31/d7/be31d7e4e3c7b60d1fd058f4fde5abad.jpg'},
+  {id:5,title:'Leather Brown Shoe',price:79.99,img:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQZ2kDWb1bjct-1ZvWS3fOdDWYJ7IF_RJFuJg&s'},
+  {id:6,title:'Ink Pen Blue',price:12.99,img:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaw_-sgFITqrRtC5Whwkx-uzwa7RYRzrH1Rg&s'},
+  {id:7,title:'Monteverde AirForce Blue',price:34.99,img:'https://www.gouletpens.com/cdn/shop/files/Monteverde-Dakota-FP-AirForceBlue-4.jpg?crop=center&height=1200&v=1758570156&width=1200'},
+  {id:8,title:'Luxury Pen Silver',price:49.99,img:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgU30tGGQBcXslHVi9x3st38_uolxT4tv2RQ&s'},
+  {id:9,title:'Classic Pen Black',price:29.99,img:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSduNq7LEmpJYgWmSt8y3xiEoDeMnTMtlH6-w&s'},
+  {id:10,title:'Elegant Gold Pen',price:59.99,img:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLUBDu-GEkNJxH0m2Y2EunZBB7ihQGOOpUnQ&s'}
+];
+
+const grid=document.getElementById('product-grid');
+const cartPanel=document.getElementById('cart');
+const cartItemsEl=document.getElementById('cart-items');
+const cartCount=document.getElementById('cart-count');
+const authModal=document.getElementById('auth-modal');
+const checkoutModal=document.getElementById('checkout-modal');
+let mode='login';
+const cart=JSON.parse(localStorage.getItem('cart'))||[];
+updateCartCount();
+
+// === Render Products ===
+function renderProducts(){
+  grid.innerHTML='';
+  products.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`<img src="${p.img}" alt="${p.title}">
+      <h3>${p.title}</h3><p>$${p.price.toFixed(2)}</p>
+      <button class="add-btn">Add to Cart</button>`;
+    div.querySelector('.add-btn').onclick=()=>addToCart(p);
+    grid.appendChild(div);
+  });
+}
+
+// === Cart ===
+function saveCart(){localStorage.setItem('cart',JSON.stringify(cart));updateCartCount();}
+function updateCartCount(){cartCount.textContent=cart.reduce((s,i)=>s+i.qty,0);}
+function renderCart(){
+  cartItemsEl.innerHTML=cart.length?'':'<p>Your cart is empty</p>';
+  cart.forEach((it,idx)=>{
+    const d=document.createElement('div');
+    d.className='cart-item';
+    d.innerHTML=`<img src="${it.img}"><div class="meta"><b>${it.title}</b><br>$${it.price.toFixed(2)} × ${it.qty}</div><button>X</button>`;
+    d.querySelector('button').onclick=()=>{cart.splice(idx,1);saveCart();renderCart();};
+    cartItemsEl.appendChild(d);
+  });
+}
+function addToCart(prod){
+  if(!isLoggedIn()){authModal.classList.add('show');return;}
+  const f=cart.find(i=>i.id===prod.id);
+  if(f)f.qty++;else cart.push({...prod,qty:1});
+  saveCart();alert('Added to cart!');
+}
+function openCart(){renderCart();cartPanel.classList.add('open');}
+function closeCart(){cartPanel.classList.remove('open');}
+document.getElementById('btn-cart').onclick=openCart;
+document.getElementById('close-cart').onclick=closeCart;
+
+// === Auth ===
+document.getElementById('btn-login').onclick=()=>authModal.classList.add('show');
+document.getElementById('toggle-mode').onclick=()=>{
+  mode=mode==='login'?'register':'login';
+  document.getElementById('auth-title').textContent=mode==='login'?'Login':'Register';
+  document.getElementById('toggle-mode').textContent=mode==='login'?"Don't have an account? Register":"Already have an account? Login";
+};
+document.getElementById('auth-submit').onclick=()=>{
+  const email=document.getElementById('email').value.trim();
+  const pass=document.getElementById('password').value;
+  if(!email.includes('@'))return alert('Email must contain "@"');
+  if(!/[A-Z]/.test(pass)||!/[a-z]/.test(pass))return alert('Password must have uppercase & lowercase');
+  if(mode==='register'){
+    localStorage.setItem('user',JSON.stringify({email}));
+    alert('Registered successfully!');
+  }else{
+    const u=JSON.parse(localStorage.getItem('user'));
+    if(!u||u.email!==email)return alert('User not found, please register');
+    alert('Login successful!');
+  }
+  localStorage.setItem('user',JSON.stringify({email}));
+  authModal.classList.remove('show');
+  showAdminButton();
+};
+function isLoggedIn(){return !!localStorage.getItem('user');}
+
+// === Admin Only Orders ===
+function showAdminButton(){
+  const user=JSON.parse(localStorage.getItem('user'));
+  document.getElementById('btn-orders').style.display=(user && user.email==='admin@shop.com')?'inline-block':'none';
+}
+showAdminButton();
+
+// === Checkout ===
+document.getElementById('checkout').onclick=()=>{
+  if(!isLoggedIn()){authModal.classList.add('show');return;}
+  if(cart.length===0)return alert('Cart is empty');
+  checkoutModal.classList.add('show');
+};
+document.getElementById('confirm-buy').onclick=()=>{
+  const addr=document.getElementById('address').value.trim();
+  const phone=document.getElementById('phone').value.trim();
+  if(!addr)return alert('Please enter address');
+  if(!/^[0-9]{10}$/.test(phone))return alert('Phone must be 10 digits and numbers only');
+  const user=JSON.parse(localStorage.getItem('user'))||{email:'Guest'};
+  const orders=JSON.parse(localStorage.getItem('orders'))||[];
+  const newOrder={email:user.email,address:addr,phone:phone,items:cart.map(c=>c.title+' x'+c.qty)};
+  orders.push(newOrder);
+  localStorage.setItem('orders',JSON.stringify(orders));
+  alert('Order placed successfully!');
+  cart.length=0;saveCart();renderCart();checkoutModal.classList.remove('show');closeCart();
+};
+
+// === Orders ===
+document.getElementById('btn-orders').onclick=()=>{
+  const user=JSON.parse(localStorage.getItem('user'));
+  if(!user||user.email!=='admin@shop.com')return alert('Access Denied: Admin only');
+  document.getElementById('product-page').style.display='none';
+  document.getElementById('orders-page').style.display='block';
+  loadOrders();
+};
+function loadOrders(){
+  const tbody=document.querySelector('#orders-table tbody');
+  tbody.innerHTML='';
+  const orders=JSON.parse(localStorage.getItem('orders'))||[];
+  orders.forEach((o,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td>${o.email}</td><td>${o.address}</td><td>${o.phone}</td><td>${o.items.join(', ')}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+renderProducts();
+</script>
+</body>
+</html>
